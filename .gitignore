@@ -1,0 +1,13 @@
+*.iml
+.idea
+build 
+.DS_Store
+.classpath
+.project
+.settings
+bin
+
+.gradle
+gradle-wrapper.jar
+gradlew
+gradlew.bat
