@@ -1,4 +1,4 @@
-package com.github.rerorero.snowgen.field;
+package com.github.rerorero.oleoleflake.field;
 
 import org.junit.Test;
 import static org.junit.Assert.*;

@@ -1,6 +1,6 @@
-package com.github.rerorero.snowgen.field;
+package com.github.rerorero.oleoleflake.field;
 
-import com.github.rerorero.snowgen.SnowgenException;
+import com.github.rerorero.oleoleflake.OleOleFlakeException;
 
 import java.nio.LongBuffer;
 import java.util.BitSet;
@@ -31,18 +31,18 @@ public class BitField {
         return nbits - bitPos - 1;
     }
 
-    private static long toLong(BitSet bs) throws SnowgenException {
+    private static long toLong(BitSet bs) throws OleOleFlakeException {
         long[] ary = bs.toLongArray();
         if (ary.length == 1) {
             return ary[0];
         } else if (ary.length == 0) {
             return 0;
         } else {
-            throw new SnowgenException("BitSet overflow.");
+            throw new OleOleFlakeException("BitSet overflow.");
         }
     }
 
-    public long getFrom(long longValue) throws SnowgenException {
+    public long getFrom(long longValue) throws OleOleFlakeException {
         BitSet bs = BitSet.valueOf(LongBuffer.wrap(new long[]{longValue}))
                     .get(bsStart, bsStart + size);
         return toLong(bs);
@@ -52,7 +52,7 @@ public class BitField {
         return BitSet.valueOf(LongBuffer.wrap(new long[]{value << (nbits - size - start)}));
     }
 
-    public long setTo(long target, long bitValue) throws SnowgenException {
+    public long setTo(long target, long bitValue) throws OleOleFlakeException {
         BitSet bs = BitSet.valueOf(LongBuffer.wrap(new long[]{target}));
         BitSet targetbs = clearField(bs);
         BitSet valuebs = longToBitSet(bitValue);
@@ -61,7 +61,7 @@ public class BitField {
         return toLong(targetbs);
     }
 
-    protected BitSet clearField(BitSet bs) throws SnowgenException {
+    protected BitSet clearField(BitSet bs) throws OleOleFlakeException {
         BitSet copy = (BitSet)bs.clone();
         bs.set(bsStart, bsStart + size, false);
         return bs;

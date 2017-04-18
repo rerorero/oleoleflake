@@ -1,4 +1,4 @@
-package com.github.rerorero.snowgen.field;
+package com.github.rerorero.oleoleflake.field;
 
 public class TimestampField extends BitField {
     public final long epoc;

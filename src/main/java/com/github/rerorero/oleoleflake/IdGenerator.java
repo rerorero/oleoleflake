@@ -1,4 +1,4 @@
-package com.github.rerorero.snowgen;
+package com.github.rerorero.oleoleflake;
 
 public class IdGenerator {
 
