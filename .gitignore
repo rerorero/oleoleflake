@@ -6,6 +6,7 @@ build
 .project
 .settings
 bin
+target/
 
 .gradle
 gradle-wrapper.jar
