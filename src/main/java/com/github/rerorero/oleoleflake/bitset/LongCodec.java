@@ -1,6 +1,7 @@
 package com.github.rerorero.oleoleflake.bitset;
 
 import java.util.BitSet;
+import java.util.Comparator;
 
 public class LongCodec implements BitSetCodec<Long> {
 
@@ -21,5 +22,15 @@ public class LongCodec implements BitSetCodec<Long> {
         } else {
             throw new IllegalArgumentException("BitSet overflow.: " + ary.length);
         }
+    }
+
+    @Override
+    public Comparator<Long> comparator() {
+        return Comparator.naturalOrder();
+    }
+
+    @Override
+    public Class<Long> valueClass() {
+        return Long.class;
     }
 }

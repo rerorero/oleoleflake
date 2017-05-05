@@ -1,30 +1,27 @@
 package com.github.rerorero.oleoleflake.field;
 
-import com.github.rerorero.oleoleflake.OleOleFlakeException;
 import com.github.rerorero.oleoleflake.bitset.BitSetCodec;
 import com.github.rerorero.oleoleflake.bitset.BitSetUtil;
 
 import java.util.BitSet;
+import java.util.Comparator;
 
-public abstract class BitSetField<Entire, Field> implements BitField<Entire, Field> {
-    protected final int start;
-    protected final int size;
+public abstract class BitSetField<Entire, Field> extends FieldBase implements IBitSetField<Entire, Field> {
     protected final int max;
-    protected final int entireSize;
-    private final BitSetCodec<Entire> entireCodec;
-    private final BitSetCodec<Field> fieldCodec;
+    protected final BitSetCodec<Entire> entireCodec;
+    protected final BitSetCodec<Field> fieldCodec;
     protected final String detail;
+    protected final boolean inverse;
 
     protected final BitSet mask;
     private final int bsStart;
 
-    public BitSetField(int start, int size, int entireSize, BitSetCodec<Entire> entireCodec, BitSetCodec<Field> fieldCodec) {
-        this.start = start;
+    public BitSetField(int start, int size, int entireSize, BitSetCodec<Entire> entireCodec, BitSetCodec<Field> fieldCodec, boolean inverse) {
+        super(start,size,entireSize);
         this.bsStart = entireSize - start - size;
-        this.size = size;
-        this.entireSize = entireSize;
         this.entireCodec = entireCodec;
         this.fieldCodec = fieldCodec;
+        this.inverse = inverse;
 
         BitSet _mask = new BitSet(this.entireSize);
         for (int i = 0; i < size; i++) {
@@ -39,6 +36,7 @@ public abstract class BitSetField<Entire, Field> implements BitField<Entire, Fie
             .append("start=" + start)
             .append(",size=" + size)
             .append(",bsStart=" + bsStart)
+            .append(",inverse=" + inverse)
             .append(",entireSizes=" + entireSize)
             .append(",Entire=" + entireCodec.getClass().getSimpleName())
             .append(",Field=" + fieldCodec.getClass().getSimpleName())
@@ -51,6 +49,12 @@ public abstract class BitSetField<Entire, Field> implements BitField<Entire, Fie
         return detail;
     }
 
+    private BitSet inverseIfNeed(BitSet bs) {
+        if (inverse)
+            bs.flip(0, size);
+        return bs;
+    }
+
     public Field getField(Entire entire) {
         BitSet entireBs = entireCodec.toBitSet(entire);
         BitSet field = getFieldAsBit(entireBs);
@@ -59,44 +63,47 @@ public abstract class BitSetField<Entire, Field> implements BitField<Entire, Fie
 
     protected BitSet getFieldAsBit(BitSet entire) {
         entire.and(mask);
-        return BitSetUtil.shiftRight(entire, bsStart);
+        return inverseIfNeed(BitSetUtil.shiftRight(entire, bsStart));
     }
 
     public Entire putField(Entire entire, Field value) {
         BitSet entireBs = entireCodec.toBitSet(entire);
         BitSet bs = fieldCodec.toBitSet(value);
-        putFieldAsBit(entireBs, bs);
+        putFieldAsBit(entireBs, inverseIfNeed(bs));
         return entireCodec.toValue(entireBs);
     }
 
     protected void putFieldAsBit(BitSet entire, BitSet value) {
         BitSet shifted = BitSetUtil.shiftLeft(value, entireSize - size - start);
         shifted.and(mask);
-        putFieldZero(entire);
+        putZeroIntoField(entire);
         entire.or(shifted);
     }
 
-    protected void putFieldZero(BitSet entire) {
+    protected void putZeroIntoField(BitSet entire) {
         entire.set(bsStart, bsStart + size, false);
     }
 
-    public void validate() throws OleOleFlakeException {
-        if (size < 0 )
-            throw new OleOleFlakeException("Invalid bit field length: " + size);
-        if ((start < 0) || (entireSize < start))
-            throw new OleOleFlakeException("Bit field start position("+start+") is out of range(between 0 to " + entireSize + ")");
-        if ((start + size) > entireSize)
-            throw new OleOleFlakeException("Invalid bit field length(" + size + "), it's over entire bit length " + size);
-    }
-
+    @Override
     public Field zero() {
         return fieldCodec.toValue(new BitSet());
     }
 
+    @Override
     public Field full() {
         BitSet fullBitset = new BitSet();
         fullBitset.set(0, size, true);
         return fieldCodec.toValue(fullBitset);
+    }
+
+    @Override
+    public Comparator<Field> fieldComparator() {
+        return fieldCodec.comparator();
+    }
+
+    @Override
+    public Comparator<Entire> entireComparator() {
+        return entireCodec.comparator();
     }
 }
 

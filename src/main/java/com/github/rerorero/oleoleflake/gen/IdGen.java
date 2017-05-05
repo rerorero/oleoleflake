@@ -1,58 +1,94 @@
 package com.github.rerorero.oleoleflake.gen;
 
+import com.github.rerorero.oleoleflake.OleOleFlakeException;
 import com.github.rerorero.oleoleflake.bitset.BitSetCodec;
-import com.github.rerorero.oleoleflake.field.EpochField;
-import com.github.rerorero.oleoleflake.field.SequentialField;
+import com.github.rerorero.oleoleflake.field.*;
 
-import java.util.BitSet;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
-public class IdGen<Entire, Field, Seq, Epoch> {
+public class IdGen<Entire, Seq> {
 
-    private BitSetCodec<Entire> entireCodec;
-    private Optional<SequentialField<Entire, Seq>> sequenceField;
-    private Optional<EpochField<Entire, Epoch>> epochField;
+    final BitSetCodec<Entire> entireCodec;
+    final Map<String, ConstantField<Entire, ?>> constantFields;
+    final Map<String, NamedField<Entire, ?>> bindableFields;
+    final Optional<ISequentialField<Entire, Seq>> sequenceField;
+    final Optional<EpochField<Entire>> epochField;
+    final List<FieldBase> unusedFields;
 
-    public IdGen(BitSetCodec<Entire> entireCodec, Optional<SequentialField<Entire, Seq>> sequence, Optional<EpochField<Entire, Epoch>> epoch) {
+    public IdGen(
+            BitSetCodec<Entire> entireCodec,
+            List<ConstantField<Entire, ?>> constantFields,
+            List<NamedField<Entire, ?>> bindableFields,
+            Optional<ISequentialField<Entire, Seq>> sequence,
+            Optional<EpochField<Entire>> epoch,
+            List<FieldBase> unusedFields
+    ) {
         this.entireCodec = entireCodec;
+        this.constantFields = constantFields.stream().collect(Collectors.toMap(ConstantField::getName, Function.identity()));
+        this.bindableFields = bindableFields.stream().collect(Collectors.toMap(NamedField::getName, Function.identity()));
         this.sequenceField = sequence;
         this.epochField = epoch;
+        this.unusedFields = unusedFields;
     }
 
-    public Entire nextId() {
-        Entire entire = entireCodec.toValue(new BitSet());
-        synchronized (this) {
-            sequenceField.ifPresent(seq -> {
-                Seq sequence = epochField.map( epoch -> {
-                    Epoch timestamp = epoch.currentTimestamp();
-                    Epoch lastTimestamp = epoch.lastTimestamp();
-                    Seq nextSeq;
-                    if (epoch.comparator().compare(timestamp, lastTimestamp) == 0) {
-                        if (seq.reachedLimit()) {
-                            timestamp = blockTillNext(epoch);
-                            nextSeq = seq.resetSequence();
-                        } else {
-                            nextSeq = seq.nextSequence();
-                        }
-                    } else {
-                        nextSeq = seq.resetSequence();
-                    }
-                    epoch.commitLastTimestamp(timestamp);
-                    return nextSeq;
-                }).orElse(seq.nextSequence());
-
-                seq.putField(entire, sequence);
-            });
-        }
-        return entire;
+    public List<IField> allFields() {
+        ArrayList<IField> all = new ArrayList<>();
+        all.addAll(constantFields.values());
+        all.addAll(bindableFields.values());
+        sequenceField.ifPresent(f -> all.add(f));
+        epochField.ifPresent(f -> all.add(f));
+        all.addAll(unusedFields);
+        return all;
     }
 
-    private Epoch blockTillNext(EpochField<Entire, Epoch> epoch) {
-        Epoch timestamp = epoch.currentTimestamp();
-        Epoch lastTimestamp = epoch.lastTimestamp();
-        while(epoch.comparator().compare(timestamp, lastTimestamp) <= 0) {
-            timestamp = epoch.currentTimestamp();
-        }
-        return timestamp;
+    public void validate() {
+        List<IField> all = allFields();
+        all.forEach(f -> f.validate());
+    }
+
+    public boolean hasSequenceField() {
+        return sequenceField.isPresent();
+    }
+
+    public boolean hasEpochField() {
+        return epochField.isPresent();
+    }
+
+    public SnapshotIdFactory<Entire, Seq> snapshot() {
+        return new SnapshotIdFactory<Entire, Seq>(this);
+    }
+
+    public NextIdFactory<Entire, Seq> next() {
+        return new NextIdFactory<Entire, Seq>(this);
+    }
+
+    public Instant parseEpoch(Entire entire) {
+        return epochField.map(epoch -> epoch.toInstant(epoch.getField(entire)))
+                .orElseThrow(() -> new OleOleFlakeException("There is no epoch field."));
+    }
+
+    public Seq parseSequence(Entire entire) {
+        return sequenceField.map(seq -> seq.getField(entire))
+                .orElseThrow(() -> new OleOleFlakeException("There is no sequence field."));
+    }
+
+    public <T> T parseConstant(String name, Entire entire) {
+        if (!constantFields.keySet().contains(name))
+            throw new OleOleFlakeException("No such constant field: " + name);
+        ConstantField<Entire, T> field = (ConstantField<Entire, T>) constantFields.get(name);
+        return field.getField(entire);
+    }
+
+    public <T> T parseBindable(String name, Entire entire) {
+        if (!bindableFields.keySet().contains(name))
+            throw new OleOleFlakeException("No such bindable field: " + name);
+        NamedField<Entire, T> field = (NamedField<Entire, T>) bindableFields.get(name);
+        return field.getField(entire);
     }
 }

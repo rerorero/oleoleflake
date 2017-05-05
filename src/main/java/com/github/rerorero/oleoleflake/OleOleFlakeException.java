@@ -1,6 +1,6 @@
 package com.github.rerorero.oleoleflake;
 
-public class OleOleFlakeException extends Exception {
+public class OleOleFlakeException extends RuntimeException {
     public OleOleFlakeException(String message) {
         super(message);
     }
