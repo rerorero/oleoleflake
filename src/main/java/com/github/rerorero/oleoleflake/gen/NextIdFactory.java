@@ -1,6 +1,6 @@
 package com.github.rerorero.oleoleflake.gen;
 
-import com.github.rerorero.oleoleflake.field.EpochField;
+import com.github.rerorero.oleoleflake.field.TimestampField;
 
 public class NextIdFactory<Entire, Seq> extends BindableIdFactory<Entire, Seq, NextIdFactory<Entire, Seq>> {
 
@@ -18,15 +18,15 @@ public class NextIdFactory<Entire, Seq> extends BindableIdFactory<Entire, Seq, N
         synchronized (idGen) {
             idGen.sequenceField.ifPresent(seq -> {
                 Seq nextSeq;
-                if (!idGen.epochField.isPresent()) {
+                if (!idGen.timestampField.isPresent()) {
                     nextSeq = seq.nextSequence();
                 } else {
-                    EpochField<Entire> epoch = idGen.epochField.get();
-                    Long timestamp = epoch.currentTimestamp();
-                    Long lastTimestamp = epoch.lastTimestamp();
-                    if (epoch.fieldComparator().compare(timestamp, lastTimestamp) == 0) {
+                    TimestampField<Entire> tsField = idGen.timestampField.get();
+                    Long timestamp = tsField.currentTimestamp();
+                    Long lastTimestamp = tsField.lastTimestamp();
+                    if (tsField.fieldComparator().compare(timestamp, lastTimestamp) == 0) {
                         if (seq.reachedLimit()) {
-                            timestamp = blockTillNext(epoch);
+                            timestamp = blockTillNext(tsField);
                             nextSeq = seq.resetSequence();
                         } else {
                             nextSeq = seq.nextSequence();
@@ -34,9 +34,9 @@ public class NextIdFactory<Entire, Seq> extends BindableIdFactory<Entire, Seq, N
                     } else {
                         nextSeq = seq.resetSequence();
                     }
-                    // epoch field
-                    entire = epoch.putField(entire, timestamp);
-                    epoch.commitLastTimestamp(timestamp);
+                    // timestamp field
+                    entire = tsField.putField(entire, timestamp);
+                    tsField.commitLastTimestamp(timestamp);
                 }
 
                 // sequence field
@@ -44,10 +44,10 @@ public class NextIdFactory<Entire, Seq> extends BindableIdFactory<Entire, Seq, N
             });
 
             if (!idGen.sequenceField.isPresent()) {
-                idGen.epochField.ifPresent(epoch -> {
-                    Long timestamp = epoch.currentTimestamp();
-                    entire = epoch.putField(entire, timestamp);
-                    epoch.commitLastTimestamp(timestamp);
+                idGen.timestampField.ifPresent(tsField -> {
+                    Long timestamp = tsField.currentTimestamp();
+                    entire = tsField.putField(entire, timestamp);
+                    tsField.commitLastTimestamp(timestamp);
                 });
             }
         }
@@ -55,11 +55,11 @@ public class NextIdFactory<Entire, Seq> extends BindableIdFactory<Entire, Seq, N
         return entire;
     }
 
-    private Long blockTillNext(EpochField<Entire> epoch) {
-        Long timestamp = epoch.currentTimestamp();
-        Long lastTimestamp = epoch.lastTimestamp();
-        while(epoch.fieldComparator().compare(timestamp, lastTimestamp) <= 0) {
-            timestamp = epoch.currentTimestamp();
+    private Long blockTillNext(TimestampField<Entire> tsField) {
+        Long timestamp = tsField.currentTimestamp();
+        Long lastTimestamp = tsField.lastTimestamp();
+        while(tsField.fieldComparator().compare(timestamp, lastTimestamp) <= 0) {
+            timestamp = tsField.currentTimestamp();
         }
         return timestamp;
     }

@@ -1,7 +1,6 @@
 package com.github.rerorero.oleoleflake.gen.id64;
 
-import com.github.rerorero.oleoleflake.gen.id64.Id64Gen;
-import com.github.rerorero.oleoleflake.util.MockedEpochGenerator;
+import com.github.rerorero.oleoleflake.util.MockedTimestampGenerator;
 import org.junit.Test;
 
 import java.time.Instant;
@@ -50,14 +49,16 @@ public class Id64GenBuilderTest {
     }
 
     @Test
-    public void epochFieldBuilderTest() {
-        MockedEpochGenerator epoch = new MockedEpochGenerator(epochBase);
+    public void timestampFieldBuilderTest() {
+        MockedTimestampGenerator epoch = new MockedTimestampGenerator(epochBase);
         Id64Gen gen = Id64Gen.builder()
                 .nextBit(20).unusedField()
-                .nextBit(42).epochField().withEpochGenerator(epoch).startAt(epochBase)
+                .nextBit(42).timestampField().withTimestampGenerator(epoch).startAt(epochBase)
                 .nextBit(2).unusedField()
                 .build();
-        assertEquals(Long.valueOf(0b1000L), gen.snapshot().putEpoch(epochBase.plusSeconds(2)).id());
+        assertEquals(Long.valueOf(0b1000L), gen.snapshot().putTimestamp(epochBase.plusSeconds(2)).id());
+        assertEquals(Long.valueOf(0b0L), gen.snapshot().putTimestampMin().id());
+        assertEquals(Long.valueOf(0b11111111111111111111111111111111111111111100L), gen.snapshot().putTimestampMax().id());
         assertEquals(Long.valueOf(0b0L), gen.next().id());
         epoch.timestamp = epoch.timestamp + 1;
         assertEquals(Long.valueOf(0b100L), gen.next().id());
@@ -66,10 +67,12 @@ public class Id64GenBuilderTest {
         epoch.timestamp = epochBase.getEpochSecond();
         Id64Gen flipgen = Id64Gen.builder()
                 .nextBit(20).unusedField()
-                .nextBit(42).epochField().withEpochGenerator(epoch).startAt(epochBase).flip()
+                .nextBit(42).timestampField().withTimestampGenerator(epoch).startAt(epochBase).flip()
                 .nextBit(2).unusedField()
                 .build();
-        assertEquals(Long.valueOf(0b11111111111111111111111111111111111111110100L), flipgen.snapshot().putEpoch(epochBase.plusSeconds(2)).id());
+        assertEquals(Long.valueOf(0b11111111111111111111111111111111111111110100L), flipgen.snapshot().putTimestamp(epochBase.plusSeconds(2)).id());
+        assertEquals(Long.valueOf(0b11111111111111111111111111111111111111111100L), flipgen.snapshot().putTimestampMin().id());
+        assertEquals(Long.valueOf(0b0L), flipgen.snapshot().putTimestampMax().id());
         epoch.timestamp = epoch.timestamp + 1;
         assertEquals(Long.valueOf(0b11111111111111111111111111111111111111111000L), flipgen.next().id());
     }
@@ -82,6 +85,9 @@ public class Id64GenBuilderTest {
                 .nextBit(2).unusedField()
                 .build();
         assertEquals(Long.valueOf(0b1100L), gen.snapshot().putSequence(0b11L).id());
+        assertEquals(Long.valueOf(0b0L), gen.snapshot().putSequenceMin().id());
+        assertEquals(Long.valueOf(0b1111111111111111111111111111111100L), gen.snapshot().putSequenceMax().id());
+        assertEquals(Long.valueOf(0b100000L), gen.snapshot().putSequenceInitialValue().id());
         assertEquals(Long.valueOf(0b100100L), gen.next().id());
         assertEquals(Long.valueOf(0b101000L), gen.next().id());
 
@@ -91,6 +97,9 @@ public class Id64GenBuilderTest {
                 .nextBit(2).unusedField()
                 .build();
         assertEquals(Long.valueOf(0b1111111111111111111111111111110000L), flipgen.snapshot().putSequence(0b11L).id());
+        assertEquals(Long.valueOf(0b1111111111111111111111111111111100L), flipgen.snapshot().putSequenceMin().id());
+        assertEquals(Long.valueOf(0b0L), flipgen.snapshot().putSequenceMax().id());
+        assertEquals(Long.valueOf(0b1111111111111111111111111111011100L), flipgen.snapshot().putSequenceInitialValue().id());
         assertEquals(Long.valueOf(0b1111111111111111111111111111011000L), flipgen.next().id());
         assertEquals(Long.valueOf(0b1111111111111111111111111111010100L), flipgen.next().id());
     }

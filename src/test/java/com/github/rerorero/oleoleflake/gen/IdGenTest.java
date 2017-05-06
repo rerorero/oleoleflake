@@ -2,7 +2,7 @@ package com.github.rerorero.oleoleflake.gen;
 
 import com.github.rerorero.oleoleflake.gen.id64.Id64Gen;
 import com.github.rerorero.oleoleflake.util.Executor;
-import com.github.rerorero.oleoleflake.util.MockedEpochGenerator;
+import com.github.rerorero.oleoleflake.util.MockedTimestampGenerator;
 import org.junit.Test;
 
 import java.time.Instant;
@@ -19,10 +19,10 @@ public class IdGenTest {
 
     @Test
     public void nextIdTest() throws ExecutionException, InterruptedException {
-        MockedEpochGenerator epoch = new MockedEpochGenerator(epochBase);
+        MockedTimestampGenerator epoch = new MockedTimestampGenerator(epochBase);
         Id64Gen gen = Id64Gen.builder()
                 .nextBit(30).unusedField()
-                .nextBit(30).epochField().withEpochGenerator(epoch).startAt(epochBase)
+                .nextBit(30).timestampField().withTimestampGenerator(epoch).startAt(epochBase)
                 .nextBit(3).sequenceField().startAt(0b001L)
                 .nextBit(1).unusedField()
                 .build();
@@ -58,10 +58,10 @@ public class IdGenTest {
 
     @Test
     public void parseTest() {
-        MockedEpochGenerator epoch = new MockedEpochGenerator(epochBase);
+        MockedTimestampGenerator epoch = new MockedTimestampGenerator(epochBase);
         Id64Gen gen = Id64Gen.builder()
                 .nextBit(4).unusedField()
-                .nextBit(10).epochField().withEpochGenerator(epoch).startAt(epochBase)
+                .nextBit(10).timestampField().withTimestampGenerator(epoch).startAt(epochBase)
                 .nextBit(10).sequenceField().startAt(0b001L)
                 .nextBit(10).constantField().name("constant1").value(0b010L)
                 .nextBit(10).constantField().name("constant2").value(0b101L).flip()
@@ -70,7 +70,7 @@ public class IdGenTest {
                 .build();
 
         long id = 0b100000000101010000001111000000010100101010010001110001L;
-        assertEquals(epochBase.plusSeconds(0b1000L), gen.parseEpoch(id));
+        assertEquals(epochBase.plusSeconds(0b1000L), gen.parseTimestamp(id));
         assertEquals(Long.valueOf(0b10101L), gen.parseSequence(id));
         assertEquals(Long.valueOf(0b1111L), gen.parseConstant("constant1", id));
         assertEquals(Long.valueOf(0b1111111010L), gen.parseConstant("constant2", id));

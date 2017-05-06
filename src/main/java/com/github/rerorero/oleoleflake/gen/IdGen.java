@@ -18,7 +18,7 @@ public class IdGen<Entire, Seq> {
     final Map<String, ConstantField<Entire, ?>> constantFields;
     final Map<String, NamedField<Entire, ?>> bindableFields;
     final Optional<ISequentialField<Entire, Seq>> sequenceField;
-    final Optional<EpochField<Entire>> epochField;
+    final Optional<TimestampField<Entire>> timestampField;
     final List<FieldBase> unusedFields;
 
     public IdGen(
@@ -26,14 +26,14 @@ public class IdGen<Entire, Seq> {
             List<ConstantField<Entire, ?>> constantFields,
             List<NamedField<Entire, ?>> bindableFields,
             Optional<ISequentialField<Entire, Seq>> sequence,
-            Optional<EpochField<Entire>> epoch,
+            Optional<TimestampField<Entire>> timestamp,
             List<FieldBase> unusedFields
     ) {
         this.entireCodec = entireCodec;
         this.constantFields = constantFields.stream().collect(Collectors.toMap(ConstantField::getName, Function.identity()));
         this.bindableFields = bindableFields.stream().collect(Collectors.toMap(NamedField::getName, Function.identity()));
         this.sequenceField = sequence;
-        this.epochField = epoch;
+        this.timestampField = timestamp;
         this.unusedFields = unusedFields;
     }
 
@@ -42,7 +42,7 @@ public class IdGen<Entire, Seq> {
         all.addAll(constantFields.values());
         all.addAll(bindableFields.values());
         sequenceField.ifPresent(f -> all.add(f));
-        epochField.ifPresent(f -> all.add(f));
+        timestampField.ifPresent(f -> all.add(f));
         all.addAll(unusedFields);
         return all;
     }
@@ -56,8 +56,8 @@ public class IdGen<Entire, Seq> {
         return sequenceField.isPresent();
     }
 
-    public boolean hasEpochField() {
-        return epochField.isPresent();
+    public boolean hasTimestampField() {
+        return timestampField.isPresent();
     }
 
     public SnapshotIdFactory<Entire, Seq> snapshot() {
@@ -68,9 +68,9 @@ public class IdGen<Entire, Seq> {
         return new NextIdFactory<Entire, Seq>(this);
     }
 
-    public Instant parseEpoch(Entire entire) {
-        return epochField.map(epoch -> epoch.toInstant(epoch.getField(entire)))
-                .orElseThrow(() -> new OleOleFlakeException("There is no epoch field."));
+    public Instant parseTimestamp(Entire entire) {
+        return timestampField.map(ts -> ts.toInstant(ts.getField(entire)))
+                .orElseThrow(() -> new OleOleFlakeException("There is no timestamp field."));
     }
 
     public Seq parseSequence(Entire entire) {

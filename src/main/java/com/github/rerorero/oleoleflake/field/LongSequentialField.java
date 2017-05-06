@@ -67,7 +67,12 @@ public class LongSequentialField<Entire> extends LongField<Entire> implements IS
 
     @Override
     public Long resetSequence() {
-        sequence = initValue;
+        sequence = initialValue();
         return sequence;
+    }
+
+    @Override
+    public Long initialValue() {
+        return initValue;
     }
 }

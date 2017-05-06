@@ -3,7 +3,7 @@ package com.github.rerorero.oleoleflake.gen.id64;
 import com.github.rerorero.oleoleflake.OleOleFlakeException;
 import com.github.rerorero.oleoleflake.bitset.BitSetCodec;
 import com.github.rerorero.oleoleflake.bitset.LongCodec;
-import com.github.rerorero.oleoleflake.epoch.EpochGenerator;
+import com.github.rerorero.oleoleflake.epoch.TimestampGenerator;
 import com.github.rerorero.oleoleflake.field.*;
 
 import java.time.Instant;
@@ -20,7 +20,7 @@ public class Id64GenBuilder {
     private ArrayList<NamedField<Long, ?>> bindableFields = new ArrayList<>();
     private ArrayList<FieldBase> unusedFields = new ArrayList<>();
     private Optional<ISequentialField<Long, Long>> sequence = Optional.empty();
-    private Optional<EpochField<Long>> epoch = Optional.empty();
+    private Optional<TimestampField<Long>> timestamp = Optional.empty();
 
     public abstract class FieldBuilder<Builder extends FieldBuilder<Builder>> {
         protected final int start;
@@ -63,8 +63,8 @@ public class Id64GenBuilder {
             return new ConstantFieldBuilder(this);
         }
 
-        public EpochFieldBuilder epochField() {
-            return new EpochFieldBuilder(this);
+        public TimestampFieldBuilder timestampField() {
+            return new TimestampFieldBuilder(this);
         }
 
         public SequenceFieldBuilder sequenceField() {
@@ -168,30 +168,30 @@ public class Id64GenBuilder {
         }
     }
 
-    public class EpochFieldBuilder extends FieldBuilder<EpochFieldBuilder> {
-        private EpochGenerator<Long> epochGen = null;
+    public class TimestampFieldBuilder extends FieldBuilder<TimestampFieldBuilder> {
+        private TimestampGenerator<Long> timestampGen = null;
         private Instant origin = null;
 
-        public EpochFieldBuilder(FieldBuilder fb) {
+        public TimestampFieldBuilder(FieldBuilder fb) {
             super(fb.start, fb.size);
         }
 
-        public EpochFieldBuilder tickPerMillisec() {
-            return withEpochGenerator(EpochGenerator.currentTimeMillisGenerator);
+        public TimestampFieldBuilder tickPerMillisec() {
+            return withTimestampGenerator(TimestampGenerator.currentTimeMillisGenerator);
         }
 
-        public EpochFieldBuilder tickPerSecond() {
-            return withEpochGenerator(EpochGenerator.currentTimeMillisGenerator);
+        public TimestampFieldBuilder tickPerSecond() {
+            return withTimestampGenerator(TimestampGenerator.currentTimeMillisGenerator);
         }
 
-        public EpochFieldBuilder withEpochGenerator(EpochGenerator<Long> generator) {
-            if (epochGen != null)
-                throw new OleOleFlakeException("Epoch generator was already set.");
-            epochGen = generator;
+        public TimestampFieldBuilder withTimestampGenerator(TimestampGenerator<Long> generator) {
+            if (timestampGen != null)
+                throw new OleOleFlakeException("Timestamp generator was already set.");
+            timestampGen = generator;
             return this;
         }
 
-        public EpochFieldBuilder startAt(Instant instant) {
+        public TimestampFieldBuilder startAt(Instant instant) {
             if (origin != null)
                 throw new OleOleFlakeException("startAt() was already set.");
             origin = instant;
@@ -200,21 +200,21 @@ public class Id64GenBuilder {
 
         @Override
         protected void setup() {
-            if (epoch.isPresent())
-                throw new OleOleFlakeException("A duplicate epoch field exists. You can only specify one epoch.");
+            if (timestamp.isPresent())
+                throw new OleOleFlakeException("A duplicate timestamp field exists. You can only specify one timestamp.");
             if (origin == null)
-                throw new OleOleFlakeException("Epoch field must have an startAt().");
-            if (epochGen == null)
-                throw new OleOleFlakeException("Epoch field must have an epoch generator.");
+                throw new OleOleFlakeException("Timestamp field must have an startAt().");
+            if (timestampGen == null)
+                throw new OleOleFlakeException("Timestamp field must have an timestamp generator.");
 
-            epoch = Optional.of(
-                    new EpochField<Long>(
+            timestamp = Optional.of(
+                    new TimestampField<Long>(
                             start,
                             size,
                             ENTIRE_SIZE,
                             entireCodec,
-                            epochGen.instantToEpoch(origin),
-                            epochGen,
+                            timestampGen.instantToTimestamp(origin),
+                            timestampGen,
                             inverse
                     ));
         }
@@ -281,7 +281,7 @@ public class Id64GenBuilder {
         if (bitPointer > ENTIRE_SIZE)
             throw new OleOleFlakeException(String.format("The field size is too large. Please set it to be %d bit. For unused fields, set unusedField().", ENTIRE_SIZE));
 
-        Id64Gen gen = new Id64Gen(entireCodec, constantFields, bindableFields, sequence, epoch, unusedFields);
+        Id64Gen gen = new Id64Gen(entireCodec, constantFields, bindableFields, sequence, timestamp, unusedFields);
         gen.validate();
         return gen;
     }

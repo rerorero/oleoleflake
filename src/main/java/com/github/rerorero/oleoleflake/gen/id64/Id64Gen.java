@@ -13,10 +13,10 @@ public class Id64Gen extends IdGen<Long, Long> {
             List<ConstantField<Long, ?>> constantFields,
             List<NamedField<Long, ?>> bindableFields,
             Optional<ISequentialField<Long, Long>> sequence,
-            Optional<EpochField<Long>> epoch,
+            Optional<TimestampField<Long>> timestamp,
             List<FieldBase> unusedFields
     ) {
-        super(entireCodec, constantFields, bindableFields, sequence, epoch, unusedFields);
+        super(entireCodec, constantFields, bindableFields, sequence, timestamp, unusedFields);
     }
 
     public static Id64GenBuilder builder() {

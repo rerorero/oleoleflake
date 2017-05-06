@@ -8,4 +8,6 @@ public interface ISequentialField<Entire, Field> extends IBitSetField<Entire, Fi
     boolean reachedLimit();
 
     Field resetSequence();
+
+    Field initialValue();
 }

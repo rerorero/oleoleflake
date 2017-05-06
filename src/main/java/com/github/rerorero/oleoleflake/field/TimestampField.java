@@ -1,36 +1,36 @@
 package com.github.rerorero.oleoleflake.field;
 
 import com.github.rerorero.oleoleflake.bitset.BitSetCodec;
-import com.github.rerorero.oleoleflake.epoch.EpochGenerator;
+import com.github.rerorero.oleoleflake.epoch.TimestampGenerator;
 
 import java.time.Instant;
 
 /**
  * @note Warning! Thread unsafety!
  */
-public class EpochField<Entire> extends LongField<Entire> {
+public class TimestampField<Entire> extends LongField<Entire> {
 
     private final long epochBase;
-    private final EpochGenerator<Long> epochGenerator;
+    private final TimestampGenerator<Long> timestampGenerator;
     private long lastTimestamp;
 
-    public EpochField(
+    public TimestampField(
             int start,
             int size,
             int entireSize,
             BitSetCodec<Entire> entireCodec,
             long origin,
-            EpochGenerator<Long> epochGen,
+            TimestampGenerator<Long> epochGen,
             boolean inverse
     ) {
         super(start, size, entireSize, entireCodec, inverse);
         this.epochBase = origin;
         this.lastTimestamp = origin;
-        this.epochGenerator = epochGen;
+        this.timestampGenerator = epochGen;
     }
 
     public Long currentTimestamp() {
-        long timestamp = epochGenerator.timeGenT();
+        long timestamp = timestampGenerator.timeGenT();
         if (timestamp < lastTimestamp) {
             throw new IllegalStateException("Clock moved backrds. current="+timestamp+", last="+lastTimestamp);
         }
@@ -54,11 +54,11 @@ public class EpochField<Entire> extends LongField<Entire> {
     }
 
     public Instant toInstant(Long epoch) {
-        return epochGenerator.epochToInstant(epoch);
+        return timestampGenerator.timestampToInstant(epoch);
     }
 
-    public Long toEpoch(Instant instant) {
-        return epochGenerator.instantToEpoch(instant);
+    public Long toTimestamp(Instant instant) {
+        return timestampGenerator.instantToTimestamp(instant);
     }
 
     @Override

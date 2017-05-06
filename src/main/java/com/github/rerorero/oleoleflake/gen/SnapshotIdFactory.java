@@ -2,10 +2,13 @@ package com.github.rerorero.oleoleflake.gen;
 
 import com.github.rerorero.oleoleflake.OleOleFlakeException;
 import com.github.rerorero.oleoleflake.field.ConstantField;
+import com.github.rerorero.oleoleflake.field.ISequentialField;
+import com.github.rerorero.oleoleflake.field.TimestampField;
 
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 public class SnapshotIdFactory<Entire, Seq> extends BindableIdFactory<Entire, Seq, SnapshotIdFactory<Entire, Seq>> {
     private Instant time = null;
@@ -16,22 +19,52 @@ public class SnapshotIdFactory<Entire, Seq> extends BindableIdFactory<Entire, Se
         super(idGen);
     }
 
-    public SnapshotIdFactory putEpoch(Instant time) {
-        if (!idGen.hasEpochField())
-            throw new OleOleFlakeException("No epoch fields available.");
+    private <T> T withTimestampField(final Function<TimestampField<Entire>, T> f) {
+        return idGen.timestampField.map(tsField -> f.apply(tsField))
+                .orElseThrow(() -> new OleOleFlakeException("No timestamp fields available."));
+    }
+
+    public SnapshotIdFactory putTimestamp(Instant time) {
         if (this.time != null)
-            throw new OleOleFlakeException("putEpoch() has already set.");
-        this.time = time;
-        return this;
+            throw new OleOleFlakeException("timestamp has already been set.");
+        return withTimestampField(ts -> {
+            this.time = time;
+            return this;
+        });
+    }
+
+    public SnapshotIdFactory putTimestampMin() {
+        return withTimestampField(ts -> putTimestamp(ts.toInstant(ts.getTimestampMin())));
+    }
+
+    public SnapshotIdFactory putTimestampMax() {
+        return withTimestampField(ts -> putTimestamp(ts.toInstant(ts.getTimestampMax())));
+    }
+
+    private <T> T withSequenceField(final Function<ISequentialField<Entire, Seq>, T> f) {
+        return idGen.sequenceField.map(field -> f.apply(field))
+                .orElseThrow(() -> new OleOleFlakeException("No sequence fields available."));
     }
 
     public SnapshotIdFactory putSequence(Seq seq) {
-        if (!idGen.hasSequenceField())
-            throw new OleOleFlakeException("No sequence fields available.");
         if (this.sequence != null)
-            throw new OleOleFlakeException("putSequence() has already set.");
-        this.sequence = seq;
-        return this;
+            throw new OleOleFlakeException("Sequence has already been set.");
+        return withSequenceField(f -> {
+            this.sequence = seq;
+            return this;
+        });
+    }
+
+    public SnapshotIdFactory putSequenceMin() {
+        return withSequenceField(field -> putSequence(field.zero()));
+    }
+
+    public SnapshotIdFactory putSequenceInitialValue() {
+        return withSequenceField(field -> putSequence(field.initialValue()));
+    }
+
+    public SnapshotIdFactory putSequenceMax() {
+        return withSequenceField(field -> putSequence(field.full()));
     }
 
     public <T> SnapshotIdFactory putConstantValue(String name, T value) {
@@ -39,7 +72,7 @@ public class SnapshotIdFactory<Entire, Seq> extends BindableIdFactory<Entire, Se
         if (field == null)
             throw new OleOleFlakeException("No such field: " + name);
         if (modifiedConstantFields.keySet().contains(name))
-            throw new OleOleFlakeException(String.format("putConstantValue(%s) has already set.", name));
+            throw new OleOleFlakeException(String.format("Constant value (%s) has already been set.", name));
         ConstantField<Entire, T> fieldT = (ConstantField<Entire, T>) field.clone();
         fieldT.setConstantValue(value);
         modifiedConstantFields.put(name, fieldT);
@@ -54,11 +87,11 @@ public class SnapshotIdFactory<Entire, Seq> extends BindableIdFactory<Entire, Se
                 throw new OleOleFlakeException("No sequence is set. You should call putSequence()."); entire = field.putField(entire, sequence);
         });
 
-        // epoch fieild
-        idGen.epochField.ifPresent(field -> {
+        // timestamp fieild
+        idGen.timestampField.ifPresent(field -> {
             if (time == null)
-                throw new OleOleFlakeException("No epoch is set. You should call putEpoch().");
-            entire = field.putField(entire, field.toEpoch(time));
+                throw new OleOleFlakeException("No timestamp is set. You should call putTimestamp().");
+            entire = field.putField(entire, field.toTimestamp(time));
         });
 
         // constant fileds

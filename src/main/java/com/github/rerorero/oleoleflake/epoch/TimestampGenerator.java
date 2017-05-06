@@ -2,48 +2,48 @@ package com.github.rerorero.oleoleflake.epoch;
 
 import java.time.Instant;
 
-public abstract class EpochGenerator<T> {
+public abstract class TimestampGenerator<T> {
 
     abstract public Instant timeGen();
 
     public T timeGenT() {
-        return instantToEpoch(timeGen());
+        return instantToTimestamp(timeGen());
     }
 
-    abstract public T instantToEpoch(Instant instant);
+    abstract public T instantToTimestamp(Instant instant);
 
-    abstract public Instant epochToInstant(T epoch);
+    abstract public Instant timestampToInstant(T epoch);
 
-    public static final EpochGenerator<Long> currentTimeMillisGenerator = new EpochGenerator<Long>() {
+    public static final TimestampGenerator<Long> currentTimeMillisGenerator = new TimestampGenerator<Long>() {
         @Override
         public Instant timeGen() {
             return Instant.now();
         }
 
         @Override
-        public Long instantToEpoch(Instant instant) {
+        public Long instantToTimestamp(Instant instant) {
             return instant.toEpochMilli();
         }
 
         @Override
-        public Instant epochToInstant(Long epoch) {
+        public Instant timestampToInstant(Long epoch) {
             return Instant.ofEpochMilli(epoch);
         }
     };
 
-    public static final EpochGenerator<Long> currentTimeSecondsGenerator = new EpochGenerator<Long>() {
+    public static final TimestampGenerator<Long> currentTimeSecondsGenerator = new TimestampGenerator<Long>() {
         @Override
         public Instant timeGen() {
             return Instant.now();
         }
 
         @Override
-        public Long instantToEpoch(Instant instant) {
+        public Long instantToTimestamp(Instant instant) {
             return instant.getEpochSecond();
         }
 
         @Override
-        public Instant epochToInstant(Long epoch) {
+        public Instant timestampToInstant(Long epoch) {
             return Instant.ofEpochSecond(epoch);
         }
     };
