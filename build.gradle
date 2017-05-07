@@ -1,9 +1,28 @@
+buildscript {
+    repositories {
+        jcenter()
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath "me.champeau.gradle:jmh-gradle-plugin:0.3.1"
+    }
+}
+
+plugins {
+    id "me.champeau.gradle.jmh" version "0.3.1"
+}
+
 group 'com.github.rerorero'
-version '0.1.0-SNAPSHOT'
+version '0.1.1'
+
 
 apply plugin: 'java'
+apply plugin: 'me.champeau.gradle.jmh'
 
-sourceCompatibility = 1.8;
+
+sourceCompatibility = 1.8
 
 repositories {
     mavenCentral()
@@ -11,4 +30,8 @@ repositories {
 
 dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.11'
+}
+
+jmh {
+    jmhVersion = '1.19'
 }
