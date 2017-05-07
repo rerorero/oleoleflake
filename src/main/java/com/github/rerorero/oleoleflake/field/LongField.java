@@ -5,8 +5,8 @@ import com.github.rerorero.oleoleflake.bitset.BitSetCodec;
 import com.github.rerorero.oleoleflake.bitset.LongCodec;
 
 public class LongField<Entire> extends BitSetField<Entire, Long> {
-    public LongField(int start, int size, int entireSize, BitSetCodec<Entire> entireCodec, boolean inverse) {
-        super(start, size, entireSize, entireCodec, LongCodec.singleton, inverse);
+    public LongField(int start, int size, int entireSize, BitSetCodec<Entire> entireCodec, boolean invert) {
+        super(start, size, entireSize, entireCodec, LongCodec.singleton, invert);
     }
 
     @Override

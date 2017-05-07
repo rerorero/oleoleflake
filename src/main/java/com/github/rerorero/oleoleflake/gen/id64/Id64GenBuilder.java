@@ -25,20 +25,20 @@ public class Id64GenBuilder {
     public abstract class FieldBuilder<Builder extends FieldBuilder<Builder>> {
         protected final int start;
         protected final int size;
-        protected boolean inverse = false;
+        protected boolean invert = false;
 
         public FieldBuilder(int start, int size) {
             this.start = start;
             this.size = size;
         }
 
-        public Builder inverse() {
-            inverse = true;
+        public Builder invert() {
+            invert = true;
             return (Builder)this;
         }
 
         public Builder flip() {
-            return inverse();
+            return invert();
         }
 
         abstract protected void setup();
@@ -127,7 +127,7 @@ public class Id64GenBuilder {
                     LongCodec.singleton,
                     _name,
                     _value,
-                    inverse
+                    invert
             );
             constantFields.add(field);
         }
@@ -162,7 +162,7 @@ public class Id64GenBuilder {
                     entireCodec,
                     LongCodec.singleton,
                     _name,
-                    inverse
+                    invert
             );
             bindableFields.add(field);
         }
@@ -215,7 +215,7 @@ public class Id64GenBuilder {
                             entireCodec,
                             timestampGen.instantToTimestamp(origin),
                             timestampGen,
-                            inverse
+                            invert
                     ));
         }
     }
@@ -260,7 +260,7 @@ public class Id64GenBuilder {
                     ENTIRE_SIZE,
                     entireCodec,
                     origin,
-                    inverse,
+                    invert,
                     this.sequencer
             ));
         }

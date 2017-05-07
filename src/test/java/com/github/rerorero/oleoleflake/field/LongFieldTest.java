@@ -18,7 +18,7 @@ public class LongFieldTest {
     }
 
     @Test
-    public void getInversedFieldTest() {
+    public void getInvertedFieldTest() {
         BitSetField sut1 = new LongField<Long>(1,4, 64, LongCodec.singleton, true);    // _xxxx___ ________ ________ ________ ________ ________ ________ ________
         BitSetField sut2 = new LongField<Long>(8,30, 64, LongCodec.singleton, true);   // ________ xxxxxxxx xxxxxxxx xxxxxxxx xxxxxx__ ________ ________ ________
 
@@ -37,7 +37,7 @@ public class LongFieldTest {
     }
 
     @Test
-    public void putInversedFieldTest() {
+    public void putInvertedFieldTest() {
         BitSetField sut1 = new LongField<Long>(1,4, 64, LongCodec.singleton, true);    // _xxxx___ ________ ________ ________ ________ ________ ________ ________
         BitSetField sut2 = new LongField<Long>(8,30, 64, LongCodec.singleton, true);   // ________ xxxxxxxx xxxxxxxx xxxxxxxx xxxxxx__ ________ ________ ________
 

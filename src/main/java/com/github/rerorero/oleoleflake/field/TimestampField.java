@@ -21,9 +21,9 @@ public class TimestampField<Entire> extends LongField<Entire> {
             BitSetCodec<Entire> entireCodec,
             long origin,
             TimestampGenerator<Long> epochGen,
-            boolean inverse
+            boolean invert
     ) {
-        super(start, size, entireSize, entireCodec, inverse);
+        super(start, size, entireSize, entireCodec, invert);
         this.epochBase = origin;
         this.lastTimestamp = origin;
         this.timestampGenerator = epochGen;

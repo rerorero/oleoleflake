@@ -24,7 +24,7 @@ public class SnapshotIdFactory<Entire, Seq> extends BindableIdFactory<Entire, Se
                 .orElseThrow(() -> new OleOleFlakeException("No timestamp fields available."));
     }
 
-    public SnapshotIdFactory putTimestamp(Instant time) {
+    public SnapshotIdFactory<Entire, Seq> putTimestamp(Instant time) {
         if (this.time != null)
             throw new OleOleFlakeException("timestamp has already been set.");
         return withTimestampField(ts -> {
@@ -33,11 +33,11 @@ public class SnapshotIdFactory<Entire, Seq> extends BindableIdFactory<Entire, Se
         });
     }
 
-    public SnapshotIdFactory putTimestampMin() {
+    public SnapshotIdFactory<Entire, Seq> putTimestampMin() {
         return withTimestampField(ts -> putTimestamp(ts.toInstant(ts.getTimestampMin())));
     }
 
-    public SnapshotIdFactory putTimestampMax() {
+    public SnapshotIdFactory<Entire, Seq> putTimestampMax() {
         return withTimestampField(ts -> putTimestamp(ts.toInstant(ts.getTimestampMax())));
     }
 
@@ -46,7 +46,7 @@ public class SnapshotIdFactory<Entire, Seq> extends BindableIdFactory<Entire, Se
                 .orElseThrow(() -> new OleOleFlakeException("No sequence fields available."));
     }
 
-    public SnapshotIdFactory putSequence(Seq seq) {
+    public SnapshotIdFactory<Entire, Seq> putSequence(Seq seq) {
         if (this.sequence != null)
             throw new OleOleFlakeException("Sequence has already been set.");
         return withSequenceField(f -> {
@@ -55,19 +55,19 @@ public class SnapshotIdFactory<Entire, Seq> extends BindableIdFactory<Entire, Se
         });
     }
 
-    public SnapshotIdFactory putSequenceMin() {
+    public SnapshotIdFactory<Entire, Seq> putSequenceMin() {
         return withSequenceField(field -> putSequence(field.zero()));
     }
 
-    public SnapshotIdFactory putSequenceInitialValue() {
+    public SnapshotIdFactory<Entire, Seq> putSequenceInitialValue() {
         return withSequenceField(field -> putSequence(field.initialValue()));
     }
 
-    public SnapshotIdFactory putSequenceMax() {
+    public SnapshotIdFactory<Entire, Seq> putSequenceMax() {
         return withSequenceField(field -> putSequence(field.full()));
     }
 
-    public <T> SnapshotIdFactory putConstantValue(String name, T value) {
+    public <T> SnapshotIdFactory<Entire, Seq> putConstantValue(String name, T value) {
         ConstantField<Entire, ?> field = idGen.constantFields.get(name);
         if (field == null)
             throw new OleOleFlakeException("No such field: " + name);

@@ -15,9 +15,9 @@ public class ConstantField<Entire, Field> extends NamedField<Entire, Field> impl
             BitSetCodec<Field> fieldCodec,
             String name,
             Field value,
-            boolean inverse
+            boolean invert
     ) {
-        super(start, size, entireSize, entireCodec, fieldCodec, name, inverse);
+        super(start, size, entireSize, entireCodec, fieldCodec, name, invert);
         this.constantValue = value;
     }
 
@@ -42,6 +42,6 @@ public class ConstantField<Entire, Field> extends NamedField<Entire, Field> impl
 
     @Override
     public ConstantField<Entire, Field> clone() {
-        return new ConstantField<Entire, Field>(start, size, entireSize, entireCodec, fieldCodec, name, constantValue, inverse);
+        return new ConstantField<Entire, Field>(start, size, entireSize, entireCodec, fieldCodec, name, constantValue, invert);
     }
 }

@@ -24,6 +24,7 @@ public class NextIdFactory<Entire, Seq> extends BindableIdFactory<Entire, Seq, N
                     TimestampField<Entire> tsField = idGen.timestampField.get();
                     Long timestamp = tsField.currentTimestamp();
                     Long lastTimestamp = tsField.lastTimestamp();
+                    // TODO: check backwards
                     if (tsField.fieldComparator().compare(timestamp, lastTimestamp) == 0) {
                         if (seq.reachedLimit()) {
                             timestamp = blockTillNext(tsField);
@@ -58,6 +59,7 @@ public class NextIdFactory<Entire, Seq> extends BindableIdFactory<Entire, Seq, N
     private Long blockTillNext(TimestampField<Entire> tsField) {
         Long timestamp = tsField.currentTimestamp();
         Long lastTimestamp = tsField.lastTimestamp();
+        // TODO: It should not full spin when it waits a second.
         while(tsField.fieldComparator().compare(timestamp, lastTimestamp) <= 0) {
             timestamp = tsField.currentTimestamp();
         }

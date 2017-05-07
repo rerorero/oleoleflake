@@ -17,10 +17,10 @@ public class LongSequentialField<Entire> extends LongField<Entire> implements IS
             int entireSize,
             BitSetCodec<Entire> entireCodec,
             long initial,
-            boolean inverse,
+            boolean invert,
             LongSequencer<Entire> sequencer
     ) {
-        super(start, size, entireSize, entireCodec, inverse);
+        super(start, size, entireSize, entireCodec, invert);
         this.sequence = initial;
         this.initValue = initial;
         this.sequencer = sequencer;

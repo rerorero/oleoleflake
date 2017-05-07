@@ -14,9 +14,9 @@ public class NamedField<Entire, Field> extends BitSetField<Entire, Field> {
             BitSetCodec<Entire> entireCodec,
             BitSetCodec<Field> fieldCodec,
             String name,
-            boolean inverse
+            boolean invert
     ) {
-        super(start, size, entireSize, entireCodec, fieldCodec, inverse);
+        super(start, size, entireSize, entireCodec, fieldCodec, invert);
         this.name = name;
     }
 

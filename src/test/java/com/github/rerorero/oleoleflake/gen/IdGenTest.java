@@ -77,4 +77,32 @@ public class IdGenTest {
         assertEquals(Long.valueOf(0b10101001L), gen.parseBindable("bind1", id));
         assertEquals(Long.valueOf(0b1110001110L), gen.parseBindable("bind2", id));
     }
+
+    @Test
+    public void snowflakeExample() {
+        Id64Gen snowflake = Id64Gen.builder()
+                .nextBit(1).unusedField() // always unsigned
+                .nextBit(41).timestampField().tickPerMillisec().startAt(Instant.parse("2017-01-01T00:00:00.00Z"))
+                .nextBit(5).constantField().name("data-center-id").value(1)
+                .nextBit(5).constantField().name("worker-id").value(2)
+                .nextBit(12).sequenceField()
+                .build();
+
+        Instant now = Instant.now();
+
+        // generate ID
+        Long id = snowflake.next().id();
+
+        // parse timestamp.
+        Instant parsedTime = snowflake.parseTimestamp(id);
+        assertTrue((parsedTime.getEpochSecond() - now.getEpochSecond()) <= 1);
+
+        // generate ID with specified values.
+        Long id2 = snowflake.snapshot()
+                .putTimestamp(Instant.parse("2017-01-01T00:00:00.00Z"))
+                .putSequence(Long.valueOf(100))
+                .id();
+        assertEquals(Instant.parse("2017-01-01T00:00:00.00Z"), snowflake.parseTimestamp(id2));
+        assertEquals(Long.valueOf(100), snowflake.parseSequence(id2));
+    }
 }
