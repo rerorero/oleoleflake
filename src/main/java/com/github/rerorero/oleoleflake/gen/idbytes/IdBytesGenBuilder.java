@@ -1,27 +1,31 @@
-package com.github.rerorero.oleoleflake.gen.id64;
+package com.github.rerorero.oleoleflake.gen.idbytes;
 
 import com.github.rerorero.oleoleflake.OleOleFlakeException;
 import com.github.rerorero.oleoleflake.bitset.BitSetCodec;
-import com.github.rerorero.oleoleflake.bitset.LongCodec;
+import com.github.rerorero.oleoleflake.bitset.BytesCodec;
 import com.github.rerorero.oleoleflake.epoch.TimestampGenerator;
 import com.github.rerorero.oleoleflake.field.*;
 import com.github.rerorero.oleoleflake.gen.AbstractIdGenBuilder;
 
+import java.nio.charset.Charset;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Optional;
 
-public class Id64GenBuilder extends AbstractIdGenBuilder {
+public class IdBytesGenBuilder extends AbstractIdGenBuilder {
+    private static final BitSetCodec<byte[]> entireCodec = BytesCodec.singleton;
 
-    private static final int ENTIRE_SIZE = 64;
-    private static final BitSetCodec<Long> entireCodec = LongCodec.singleton;
-
+    private final int entireSize;
     private int bitPointer = 0;
-    private ArrayList<ConstantField<Long, ?>> constantFields = new ArrayList<>();
-    private ArrayList<NamedField<Long, ?>> bindableFields = new ArrayList<>();
+    private ArrayList<ConstantField<byte[], ?>> constantFields = new ArrayList<>();
+    private ArrayList<NamedField<byte[], ?>> bindableFields = new ArrayList<>();
     private ArrayList<FieldBase> unusedFields = new ArrayList<>();
-    private Optional<ISequentialField<Long, Long>> sequence = Optional.empty();
-    private Optional<TimestampField<Long>> timestamp = Optional.empty();
+    private Optional<ISequentialField<byte[], Long>> sequence = Optional.empty();
+    private Optional<TimestampField<byte[]>> timestamp = Optional.empty();
+
+    public IdBytesGenBuilder(int idLength) {
+        this.entireSize = idLength;
+    }
 
     public abstract class FieldBuilder<Builder extends FieldBuilder<Builder>> {
         protected final int start;
@@ -46,12 +50,12 @@ public class Id64GenBuilder extends AbstractIdGenBuilder {
 
         public FieldBuilderSelector nextBit(int size) {
             setup();
-            return Id64GenBuilder.this.nextBit(size);
+            return IdBytesGenBuilder.this.nextBit(size);
         }
 
-        public Id64Gen build() {
+        public IdBytesGen build() {
             setup();
-            return Id64GenBuilder.this.build();
+            return IdBytesGenBuilder.this.build();
         }
     }
 
@@ -72,14 +76,14 @@ public class Id64GenBuilder extends AbstractIdGenBuilder {
             return new SequenceFieldBuilder(this);
         }
 
-        public BindableFieldBuilder bindableField() {
-            return new BindableFieldBuilder(this);
-        }
+//        public BindableFieldBuilder bindableField() {
+//            return new BindableFieldBuilder(this);
+//        }
 
-        public Id64GenBuilder unusedField() {
-            FieldBase field = new FieldBase(start, size, ENTIRE_SIZE);
+        public IdBytesGenBuilder unusedField() {
+            FieldBase field = new FieldBase(start, size, entireSize);
             unusedFields.add(field);
-            return Id64GenBuilder.this;
+            return IdBytesGenBuilder.this;
         }
 
         @Override
@@ -91,7 +95,7 @@ public class Id64GenBuilder extends AbstractIdGenBuilder {
     public class ConstantFieldBuilder extends FieldBuilder<ConstantFieldBuilder> {
 
         private String _name = null;
-        private Long _value = null;
+        private byte[] _value = null;
 
         public ConstantFieldBuilder(FieldBuilder fb) {
             super(fb.start, fb.size);
@@ -104,11 +108,19 @@ public class Id64GenBuilder extends AbstractIdGenBuilder {
             return this;
         }
 
-        public ConstantFieldBuilder value(long v) {
+        public ConstantFieldBuilder value(byte[] v) {
             if (_value != null)
                 throw new OleOleFlakeException("value() was already set.");
             _value = v;
             return this;
+        }
+
+        public ConstantFieldBuilder value(String v) {
+            return value(v.getBytes());
+        }
+
+        public ConstantFieldBuilder value(String v, Charset charset) {
+            return value(v.getBytes(charset));
         }
 
         @Override
@@ -117,55 +129,33 @@ public class Id64GenBuilder extends AbstractIdGenBuilder {
                 throw new OleOleFlakeException("Constant value field requires value().");
             if (constantFields.stream().anyMatch(f -> f.getName().equals(_name)))
                 throw new OleOleFlakeException("A duplicate field name exists: " + _name);
+            if (_value.length > size)
+                throw new OleOleFlakeException(String.format("The size of a field '%s' is too long.", _name));
             if (_name == null)
                 _name = String.format("const-%d-%d", start, size);
 
-            ConstantField<Long, Long> field = new ConstantField<>(
+            byte[] fixedArray;
+            if (_value.length < size) {
+                byte[] padding = new byte[size -  _name.length()];
+                fixedArray = new byte[size];
+                System.arraycopy(_value,0,fixedArray,0, _value.length);
+                System.arraycopy(padding,0,fixedArray,_value.length, padding.length);
+            } else {
+                fixedArray = _value;
+            }
+
+            ConstantField<byte[], byte[]> field = new ConstantField<>(
                     start,
                     size,
-                    ENTIRE_SIZE,
+                    entireSize,
                     entireCodec,
-                    LongCodec.singleton,
+                    BytesCodec.singleton,
                     _name,
-                    _value,
+                    fixedArray,
                     invert
             );
+
             constantFields.add(field);
-        }
-    }
-
-    public class BindableFieldBuilder extends FieldBuilder<BindableFieldBuilder> {
-
-        private String _name = null;
-
-        public BindableFieldBuilder(FieldBuilder fb) {
-            super(fb.start, fb.size);
-        }
-
-        public BindableFieldBuilder name(String n) {
-            if (_name != null)
-                throw new OleOleFlakeException("name() was already set.");
-            _name = n;
-            return this;
-        }
-
-        @Override
-        protected void setup() {
-            if (bindableFields.stream().anyMatch(f -> f.getName().equals(_name)))
-                throw new OleOleFlakeException("A duplicate field name exists: " + _name);
-            if (_name == null)
-                _name = String.format("bindable-%d-%d", start, size);
-
-            NamedField<Long, Long> field = new NamedField<>(
-                    start,
-                    size,
-                    ENTIRE_SIZE,
-                    entireCodec,
-                    LongCodec.singleton,
-                    _name,
-                    invert
-            );
-            bindableFields.add(field);
         }
     }
 
@@ -209,10 +199,10 @@ public class Id64GenBuilder extends AbstractIdGenBuilder {
                 throw new OleOleFlakeException("Timestamp field must have an timestamp generator.");
 
             timestamp = Optional.of(
-                    new TimestampField<Long>(
+                    new TimestampField<byte[]>(
                             start,
                             size,
-                            ENTIRE_SIZE,
+                            entireSize,
                             entireCodec,
                             timestampGen.instantToTimestamp(origin),
                             timestampGen,
@@ -223,7 +213,7 @@ public class Id64GenBuilder extends AbstractIdGenBuilder {
 
     public class SequenceFieldBuilder extends FieldBuilder<SequenceFieldBuilder> {
         private Long origin = null;
-        private LongSequentialField.LongSequencer<Long> sequencer = null;
+        private LongSequentialField.LongSequencer<byte[]> sequencer = null;
 
         public SequenceFieldBuilder(FieldBuilder fb) {
             super(fb.start, fb.size);
@@ -240,7 +230,7 @@ public class Id64GenBuilder extends AbstractIdGenBuilder {
             return sequencer(LongSequentialField.incrementalSequencer());
         }
 
-        public SequenceFieldBuilder sequencer(LongSequentialField.LongSequencer<Long> sequencer) {
+        public SequenceFieldBuilder sequencer(LongSequentialField.LongSequencer<byte[]> sequencer) {
             if (sequencer == null)
                 throw new OleOleFlakeException("sequencer was already set.");
             this.sequencer = sequencer;
@@ -255,10 +245,10 @@ public class Id64GenBuilder extends AbstractIdGenBuilder {
                 origin = 0L;
             if (sequencer == null)
                 this.incremental();
-            sequence = Optional.of(new LongSequentialField<Long>(
+            sequence = Optional.of(new LongSequentialField<byte[]>(
                     start,
                     size,
-                    ENTIRE_SIZE,
+                    entireSize,
                     entireCodec,
                     origin,
                     invert,
@@ -268,7 +258,7 @@ public class Id64GenBuilder extends AbstractIdGenBuilder {
     }
 
     public FieldBuilderSelector nextBit(int size) {
-        if (bitPointer + size > ENTIRE_SIZE) {
+        if (bitPointer + size > entireSize) {
             throw new OleOleFlakeException(String.format("Field size(%d) is too large.",size));
         }
         FieldBuilderSelector fb =  new FieldBuilderSelector(bitPointer, size);
@@ -276,14 +266,21 @@ public class Id64GenBuilder extends AbstractIdGenBuilder {
         return fb;
     }
 
-    public Id64Gen build() {
-        if (bitPointer < ENTIRE_SIZE)
-            throw new OleOleFlakeException(String.format("The field size is too small. Please set it to be %d bit. For unused fields, set unusedField().", ENTIRE_SIZE));
-        if (bitPointer > ENTIRE_SIZE)
-            throw new OleOleFlakeException(String.format("The field size is too large. Please set it to be %d bit. For unused fields, set unusedField().", ENTIRE_SIZE));
+    public IdBytesGen build() {
+        if (bitPointer < entireSize)
+            throw new OleOleFlakeException(String.format("The field size is too small. Please set it to be %d bit. For unused fields, set unusedField().", entireCodec));
+        if (bitPointer > entireSize)
+            throw new OleOleFlakeException(String.format("The field size is too large. Please set it to be %d bit. For unused fields, set unusedField().", entireCodec));
 
-        Id64Gen gen = new Id64Gen(entireCodec, constantFields, bindableFields, sequence, timestamp, unusedFields);
+        IdBytesGen gen = new IdBytesGen(entireCodec, constantFields, bindableFields, sequence, timestamp, unusedFields);
         gen.validate();
         return gen;
+    }
+
+    private Byte[] toByteArray(byte[] bytes) {
+        Byte[] boxed = new Byte[bytes.length];
+        int i = 0;
+        for(byte b: bytes) boxed[i++] = b;
+        return boxed;
     }
 }
