@@ -3,16 +3,17 @@ package com.github.rerorero.oleoleflake.gen.idbytes;
 import com.github.rerorero.oleoleflake.OleOleFlakeException;
 import com.github.rerorero.oleoleflake.bitset.BitSetCodec;
 import com.github.rerorero.oleoleflake.bitset.BytesCodec;
+import com.github.rerorero.oleoleflake.bitset.LongCodec;
+import com.github.rerorero.oleoleflake.bitset.StringCodec;
 import com.github.rerorero.oleoleflake.epoch.TimestampGenerator;
 import com.github.rerorero.oleoleflake.field.*;
-import com.github.rerorero.oleoleflake.gen.AbstractIdGenBuilder;
 
 import java.nio.charset.Charset;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Optional;
 
-public class IdBytesGenBuilder extends AbstractIdGenBuilder {
+public class IdBytesGenBuilder {
     private static final BitSetCodec<byte[]> entireCodec = BytesCodec.singleton;
 
     private final int entireSize;
@@ -23,8 +24,9 @@ public class IdBytesGenBuilder extends AbstractIdGenBuilder {
     private Optional<ISequentialField<byte[], Long>> sequence = Optional.empty();
     private Optional<TimestampField<byte[]>> timestamp = Optional.empty();
 
-    public IdBytesGenBuilder(int idLength) {
-        this.entireSize = idLength;
+    public IdBytesGenBuilder(int byteLength) {
+        // entireSize is a bit number.
+        this.entireSize = byteLength * 8;
     }
 
     public abstract class FieldBuilder<Builder extends FieldBuilder<Builder>> {
@@ -64,8 +66,20 @@ public class IdBytesGenBuilder extends AbstractIdGenBuilder {
             super(start, size);
         }
 
-        public ConstantFieldBuilder constantField() {
-            return new ConstantFieldBuilder(this);
+        public StringConstantFieldBuilder constantStringField() {
+            return constantStringField(Charset.defaultCharset());
+        }
+
+        public StringConstantFieldBuilder constantStringField(Charset charset) {
+            return new StringConstantFieldBuilder(this, charset);
+        }
+
+        public BytesConstantFieldBuilder constantField() {
+            return new BytesConstantFieldBuilder(this);
+        }
+
+        public LongConstantFieldBuilder constantLongField() {
+            return new LongConstantFieldBuilder(this);
         }
 
         public TimestampFieldBuilder timestampField() {
@@ -76,9 +90,21 @@ public class IdBytesGenBuilder extends AbstractIdGenBuilder {
             return new SequenceFieldBuilder(this);
         }
 
-//        public BindableFieldBuilder bindableField() {
-//            return new BindableFieldBuilder(this);
-//        }
+        public StringBindableFieldBuilder bindableStringField(Charset charset) {
+            return new StringBindableFieldBuilder(this, charset);
+        }
+
+        public StringBindableFieldBuilder bindableStringField() {
+            return bindableStringField(Charset.defaultCharset());
+        }
+
+        public LongBindableFieldBuilder bindableLongField() {
+            return new LongBindableFieldBuilder(this);
+        }
+
+        public BytesBindableFieldBuilder bindableField() {
+            return new BytesBindableFieldBuilder(this);
+        }
 
         public IdBytesGenBuilder unusedField() {
             FieldBase field = new FieldBase(start, size, entireSize);
@@ -92,36 +118,30 @@ public class IdBytesGenBuilder extends AbstractIdGenBuilder {
         }
     }
 
-    public class ConstantFieldBuilder extends FieldBuilder<ConstantFieldBuilder> {
+    public abstract class ConstantFieldBuilder<Builder extends FieldBuilder<Builder>, V> extends FieldBuilder<Builder> {
 
-        private String _name = null;
-        private byte[] _value = null;
+        protected String _name = null;
+        protected V _value = null;
 
         public ConstantFieldBuilder(FieldBuilder fb) {
             super(fb.start, fb.size);
         }
 
-        public ConstantFieldBuilder name(String n) {
+        public Builder name(String n) {
             if (_name != null)
                 throw new OleOleFlakeException("name() was already set.");
             _name = n;
-            return this;
+            return (Builder) this;
         }
 
-        public ConstantFieldBuilder value(byte[] v) {
+        public Builder value(V v) {
             if (_value != null)
                 throw new OleOleFlakeException("value() was already set.");
             _value = v;
-            return this;
+            return (Builder) this;
         }
 
-        public ConstantFieldBuilder value(String v) {
-            return value(v.getBytes());
-        }
-
-        public ConstantFieldBuilder value(String v, Charset charset) {
-            return value(v.getBytes(charset));
-        }
+        abstract protected ConstantField<byte[], V> newField();
 
         @Override
         protected void setup() {
@@ -129,33 +149,176 @@ public class IdBytesGenBuilder extends AbstractIdGenBuilder {
                 throw new OleOleFlakeException("Constant value field requires value().");
             if (constantFields.stream().anyMatch(f -> f.getName().equals(_name)))
                 throw new OleOleFlakeException("A duplicate field name exists: " + _name);
-            if (_value.length > size)
-                throw new OleOleFlakeException(String.format("The size of a field '%s' is too long.", _name));
             if (_name == null)
                 _name = String.format("const-%d-%d", start, size);
 
-            byte[] fixedArray;
-            if (_value.length < size) {
-                byte[] padding = new byte[size -  _name.length()];
-                fixedArray = new byte[size];
-                System.arraycopy(_value,0,fixedArray,0, _value.length);
-                System.arraycopy(padding,0,fixedArray,_value.length, padding.length);
-            } else {
-                fixedArray = _value;
-            }
+            ConstantField<byte[], V> field = newField();
 
-            ConstantField<byte[], byte[]> field = new ConstantField<>(
+            constantFields.add(field);
+        }
+    }
+
+    public class BytesConstantFieldBuilder extends ConstantFieldBuilder<BytesConstantFieldBuilder, byte[]> {
+        public BytesConstantFieldBuilder(FieldBuilder fb) {
+            super(fb);
+        }
+
+        @Override
+        protected ConstantField<byte[], byte[]> newField() {
+            if (_value.length * 8 > size)
+                throw new OleOleFlakeException(String.format("The size of a field '%s' is too long.", _name));
+
+            return new ConstantField<>(
                     start,
                     size,
                     entireSize,
                     entireCodec,
                     BytesCodec.singleton,
                     _name,
-                    fixedArray,
+                    _value,
                     invert
             );
+        }
+    }
 
-            constantFields.add(field);
+    public class LongConstantFieldBuilder extends ConstantFieldBuilder<LongConstantFieldBuilder, Long> {
+        public LongConstantFieldBuilder(FieldBuilder fb) {
+            super(fb);
+        }
+
+        @Override
+        protected ConstantField<byte[], Long> newField() {
+
+            if (LongCodec.singleton.toBitSet(_value).length() > size)
+                throw new OleOleFlakeException(String.format("The size of a field '%s' is too long.", _name));
+
+            return new ConstantField<>(
+                    start,
+                    size,
+                    entireSize,
+                    entireCodec,
+                    LongCodec.singleton,
+                    _name,
+                    _value,
+                    invert
+            );
+        }
+    }
+
+    public class StringConstantFieldBuilder extends ConstantFieldBuilder<StringConstantFieldBuilder, String> {
+        private final StringCodec codec;
+
+        public StringConstantFieldBuilder(FieldBuilder fb, Charset charset) {
+            super(fb);
+            this.codec = new StringCodec(charset);
+        }
+
+        @Override
+        protected ConstantField<byte[], String> newField() {
+            if (codec.toBitSet(_value).length() > size)
+                throw new OleOleFlakeException(String.format("The size of a field '%s' is too long.", _name));
+
+            return new ConstantField<>(
+                    start,
+                    size,
+                    entireSize,
+                    entireCodec,
+                    codec,
+                    _name,
+                    _value,
+                    invert
+            );
+        }
+    }
+    public abstract class BindableFieldBuilder<Builder extends FieldBuilder<Builder>, V> extends FieldBuilder<Builder> {
+
+        protected String _name = null;
+
+        public BindableFieldBuilder(FieldBuilder fb) {
+            super(fb.start, fb.size);
+        }
+
+        public Builder name(String n) {
+            if (_name != null)
+                throw new OleOleFlakeException("name() was already set.");
+            _name = n;
+            return (Builder)this;
+        }
+
+        abstract protected NamedField<byte[], V> newNameField();
+
+        @Override
+        protected void setup() {
+            if (bindableFields.stream().anyMatch(f -> f.getName().equals(_name)))
+                throw new OleOleFlakeException("A duplicate field name exists: " + _name);
+            if (_name == null)
+                _name = String.format("bindable-%d-%d", start, size);
+
+            NamedField<byte[], V> field = newNameField();
+            bindableFields.add(field);
+        }
+    }
+
+    public class StringBindableFieldBuilder extends BindableFieldBuilder<StringBindableFieldBuilder, String> {
+
+        private final StringCodec codec;
+
+        public StringBindableFieldBuilder(FieldBuilder fb, Charset charset) {
+            super(fb);
+            this.codec = new StringCodec(charset);
+        }
+
+        @Override
+        protected NamedField<byte[], String> newNameField() {
+            return new NamedField<byte[], String>(
+                    start,
+                    size,
+                    entireSize,
+                    entireCodec,
+                    codec,
+                    _name,
+                    invert
+            );
+        }
+    }
+
+    public class BytesBindableFieldBuilder extends BindableFieldBuilder<BytesBindableFieldBuilder, byte[]> {
+
+        public BytesBindableFieldBuilder(FieldBuilder fb) {
+            super(fb);
+        }
+
+        @Override
+        protected NamedField<byte[], byte[]> newNameField() {
+            return new NamedField<byte[], byte[]>(
+                    start,
+                    size,
+                    entireSize,
+                    entireCodec,
+                    BytesCodec.singleton,
+                    _name,
+                    invert
+            );
+        }
+    }
+
+    public class LongBindableFieldBuilder extends BindableFieldBuilder<LongBindableFieldBuilder, Long> {
+
+        public LongBindableFieldBuilder(FieldBuilder fb) {
+            super(fb);
+        }
+
+        @Override
+        protected NamedField<byte[], Long> newNameField() {
+            return new NamedField<byte[], Long>(
+                    start,
+                    size,
+                    entireSize,
+                    entireCodec,
+                    LongCodec.singleton,
+                    _name,
+                    invert
+            );
         }
     }
 
@@ -268,11 +431,11 @@ public class IdBytesGenBuilder extends AbstractIdGenBuilder {
 
     public IdBytesGen build() {
         if (bitPointer < entireSize)
-            throw new OleOleFlakeException(String.format("The field size is too small. Please set it to be %d bit. For unused fields, set unusedField().", entireCodec));
+            throw new OleOleFlakeException(String.format("The field size(The number of bits) is too small. Please set it to be %d bit. For unused fields, set unusedField().", entireCodec));
         if (bitPointer > entireSize)
-            throw new OleOleFlakeException(String.format("The field size is too large. Please set it to be %d bit. For unused fields, set unusedField().", entireCodec));
+            throw new OleOleFlakeException(String.format("The field size(The number of bits) is too large. Please set it to be %d bit. For unused fields, set unusedField().", entireCodec));
 
-        IdBytesGen gen = new IdBytesGen(entireCodec, constantFields, bindableFields, sequence, timestamp, unusedFields);
+        IdBytesGen gen = new IdBytesGen(entireCodec, constantFields, bindableFields, sequence, timestamp, unusedFields, entireSize);
         gen.validate();
         return gen;
     }

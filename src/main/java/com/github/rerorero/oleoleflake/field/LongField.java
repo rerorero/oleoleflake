@@ -12,7 +12,7 @@ public class LongField<Entire> extends BitSetField<Entire, Long> {
     @Override
     public void validate() {
         super.validate();
-        if ((start + size) > 64)
+        if (size > 64)
             throw new OleOleFlakeException("Invalid bit field length(" + size + "), it's over 64 bit length " + size);
     }
 }

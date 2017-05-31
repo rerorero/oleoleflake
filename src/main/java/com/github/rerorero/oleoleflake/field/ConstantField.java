@@ -24,7 +24,7 @@ public class ConstantField<Entire, Field> extends NamedField<Entire, Field> impl
     public void validate() {
         super.validate();
         if (fieldComparator().compare(constantValue, full()) > 0)
-            throw new OleOleFlakeException("Constant field value ("+ name+"="+constantValue+") overflows.");
+            throw new OleOleFlakeException("Constant field value ("+ name+"="+constantValue+") overflows.(full is" + full() + ")");
     }
 
     public Field getConstantValue() {

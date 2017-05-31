@@ -1,7 +1,9 @@
 package com.github.rerorero.oleoleflake.bitset;
 
+import com.github.rerorero.oleoleflake.util.ByteUtil;
+
 import java.util.BitSet;
-        import java.util.Comparator;
+import java.util.Comparator;
 
 public class BytesCodec implements BitSetCodec<byte[]> {
 
@@ -23,12 +25,13 @@ public class BytesCodec implements BitSetCodec<byte[]> {
 
     @Override
     public BitSet toBitSet(byte[] value) {
-        return BitSet.valueOf(value);
+        byte[] reversed = ByteUtil.reverse(value.clone());
+        return BitSet.valueOf(reversed);
     }
 
     @Override
     public byte[] toValue(BitSet bit) {
-        return bit.toByteArray();
+        return ByteUtil.reverse(bit.toByteArray());
     }
 
     @Override

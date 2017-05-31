@@ -5,15 +5,14 @@ import com.github.rerorero.oleoleflake.bitset.BitSetCodec;
 import com.github.rerorero.oleoleflake.bitset.LongCodec;
 import com.github.rerorero.oleoleflake.epoch.TimestampGenerator;
 import com.github.rerorero.oleoleflake.field.*;
-import com.github.rerorero.oleoleflake.gen.AbstractIdGenBuilder;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Optional;
 
-public class Id64GenBuilder extends AbstractIdGenBuilder {
+public class Id64GenBuilder {
 
-    private static final int ENTIRE_SIZE = 64;
+    public static final int ENTIRE_SIZE = 64;
     private static final BitSetCodec<Long> entireCodec = LongCodec.singleton;
 
     private int bitPointer = 0;

@@ -16,7 +16,7 @@ public class Id64Gen extends IdGen<Long, Long> {
             Optional<TimestampField<Long>> timestamp,
             List<FieldBase> unusedFields
     ) {
-        super(entireCodec, constantFields, bindableFields, sequence, timestamp, unusedFields);
+        super(entireCodec, constantFields, bindableFields, sequence, timestamp, unusedFields, Id64GenBuilder.ENTIRE_SIZE);
     }
 
     public static Id64GenBuilder builder() {

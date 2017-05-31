@@ -14,12 +14,13 @@ import java.util.stream.Collectors;
 
 public class IdGen<Entire, Seq> {
 
-    final BitSetCodec<Entire> entireCodec;
-    final Map<String, ConstantField<Entire, ?>> constantFields;
-    final Map<String, NamedField<Entire, ?>> bindableFields;
-    final Optional<ISequentialField<Entire, Seq>> sequenceField;
-    final Optional<TimestampField<Entire>> timestampField;
-    final List<FieldBase> unusedFields;
+    final protected BitSetCodec<Entire> entireCodec;
+    final protected Map<String, ConstantField<Entire, ?>> constantFields;
+    final protected Map<String, NamedField<Entire, ?>> bindableFields;
+    final protected Optional<ISequentialField<Entire, Seq>> sequenceField;
+    final protected Optional<TimestampField<Entire>> timestampField;
+    final protected List<FieldBase> unusedFields;
+    final protected int entireBitLen;
 
     public IdGen(
             BitSetCodec<Entire> entireCodec,
@@ -27,7 +28,8 @@ public class IdGen<Entire, Seq> {
             List<NamedField<Entire, ?>> bindableFields,
             Optional<ISequentialField<Entire, Seq>> sequence,
             Optional<TimestampField<Entire>> timestamp,
-            List<FieldBase> unusedFields
+            List<FieldBase> unusedFields,
+            int entireBitLen
     ) {
         this.entireCodec = entireCodec;
         this.constantFields = constantFields.stream().collect(Collectors.toMap(ConstantField::getName, Function.identity()));
@@ -35,6 +37,11 @@ public class IdGen<Entire, Seq> {
         this.sequenceField = sequence;
         this.timestampField = timestamp;
         this.unusedFields = unusedFields;
+        this.entireBitLen = entireBitLen;
+    }
+
+    public int getIdBitLen() {
+        return this.entireBitLen;
     }
 
     public List<IField> allFields() {
@@ -61,11 +68,11 @@ public class IdGen<Entire, Seq> {
     }
 
     public SnapshotIdFactory<Entire, Seq> snapshot() {
-        return new SnapshotIdFactory<Entire, Seq>(this);
+        return newSnapshotIdFactory();
     }
 
     public NextIdFactory<Entire, Seq> next() {
-        return new NextIdFactory<Entire, Seq>(this);
+        return newNextIdFactory();
     }
 
     public Instant parseTimestamp(Entire entire) {
@@ -90,5 +97,13 @@ public class IdGen<Entire, Seq> {
             throw new OleOleFlakeException("No such bindable field: " + name);
         NamedField<Entire, T> field = (NamedField<Entire, T>) bindableFields.get(name);
         return field.getField(entire);
+    }
+
+    protected NextIdFactory<Entire, Seq> newNextIdFactory() {
+        return new NextIdFactory<Entire, Seq>(this);
+    }
+
+    protected SnapshotIdFactory<Entire, Seq> newSnapshotIdFactory() {
+        return new SnapshotIdFactory<Entire, Seq>(this);
     }
 }

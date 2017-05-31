@@ -52,7 +52,6 @@ public class NextIdFactory<Entire, Seq> extends BindableIdFactory<Entire, Seq, N
                 });
             }
         }
-
         return entire;
     }
 
