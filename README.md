@@ -11,8 +11,9 @@ More functions are as follows.
 - Field values (timestamp, machine id, etc) can be easily parsed from ID.
 - ID generation with the specified value (snapshot function). This is useful for creating SQL queries that you want to filter with a range of the timestamp field of ID.
 - Transparently handle inverted bits.
+- Both binary (byte []) and long id can be generated.
 
-## Examples
+## Examples (Long type)
 ```java
 // Get Long(64bit) ID generator. That is thread-safe.
 Id64Gen snowflake = Id64Gen.builder()
@@ -82,4 +83,18 @@ Id64Gen gen = Id64Gen.builder()
 
 // Generates id with specified worker.
 Long id = gen.next().bind("worker", 1).id();
+```
+
+## Binary Id
+If you want to generate a binary ID, use `IdBytesGen`.
+```java
+// IdBytesGen.builder() takes the length of bytes
+IdBytesGen gen = IdBytesGen.builder(13)
+  .nextBit(10).bindableLongField().name("cluster")
+  .nextBit(32).bindableField().name("group-hash")
+  .nextBit(42).timestampField().tickPerMillisec().startAt(Instant.parse("2017-01-01T00:00:00.00Z"))
+  .nextBit(20).sequenceField()
+  .build();
+
+byte[] id = gen.next().id();
 ```
